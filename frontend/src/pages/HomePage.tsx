@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
 import { useDebouncedCallback } from 'use-debounce';
+// @ts-ignore
 import html2canvas from 'html2canvas';
 import FileUploader from '../components/FileUploader';
 import ArtworkForm from '../components/ArtworkForm';
