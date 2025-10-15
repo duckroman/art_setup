@@ -1,0 +1,29 @@
+Actúa como un arquitecto de software y desarrollador Full Stack. El objetivo es crear una aplicación web de galería de arte virtual, optimizada para dispositivos móviles.
+
+La aplicación debe tener las siguientes funcionalidades:
+
+**1. Interfaz de Usuario (Frontend):**
+* **Galería principal:** Una galería de arte virtual donde los usuarios pueden navegar y seleccionar obras.
+* **Visualización en espacios:** Permitir que los usuarios coloquen y visualicen las obras de arte en diferentes escenarios predefinidos (salas de estar, oficinas, teatros, etc.).
+* **Herramientas de edición:** Funcionalidades para que el usuario pueda ajustar el tamaño, rotar la obra de arte y moverla dentro del espacio virtual.
+
+**2. Panel de Administración (Backend):**
+* **Gestión de obras:** Un panel de administración para que el administrador pueda subir nuevas imágenes de obras de arte, editarlas (metadatos como título, autor, descripción) y eliminarlas.
+* **Gestión de espacios:** Un panel para añadir, editar y eliminar los espacios (imágenes de interiores) donde se visualizan las obras.
+
+**3. Sistema de Usuarios y Seguridad:**
+* **Roles de usuario:** Debe haber un sistema de autenticación que diferencie entre usuarios normales (solo lectura de la galería) y un administrador (con acceso al panel de gestión).
+* **Seguridad:** Implementar un sistema de autenticación seguro (OAuth, JWT, etc.) para proteger el panel de administración.
+
+**Requisitos Tecnológicos:**
+
+* **Frontend:** Elige un framework moderno de JavaScript (React, Vue o Angular) que sea ideal para construir una Single Page Application (SPA) con un fuerte enfoque en la experiencia de usuario móvil.
+* **Backend:** Elige un stack robusto y escalable (Node.js con Express, Python con Django/Flask, o Java con Spring Boot) para manejar la API RESTful que sirva los datos del frontend y el panel de administración.
+* **Base de Datos:** Elige una base de datos (SQL o NoSQL) que sea la más adecuada para almacenar la información de las obras de arte, los espacios y los usuarios.
+
+**Instrucciones para Gemini:**
+
+1.  **Justifica la elección de tecnologías:** Explica por qué el stack que has elegido es la mejor opción para este proyecto, considerando el rendimiento, la escalabilidad y la facilidad de desarrollo.
+2.  **Estructura del proyecto:** Genera la estructura de carpetas básica para el frontend y el backend.
+3.  **Código de ejemplo:** Proporciona un `componente` de ejemplo para el frontend (por ejemplo, el componente de la galería) y un `modelo` y `endpoint` de ejemplo para el backend (por ejemplo, para gestionar las obras de arte).
+4.  **Diagrama de arquitectura:** Describe o genera un diagrama de alto nivel que muestre cómo interactúan el frontend, el backend y la base de datos.
