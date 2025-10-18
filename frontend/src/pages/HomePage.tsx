@@ -96,13 +96,13 @@ const HomePage: React.FC = () => {
 
   // --- DATA FETCHING ---
   useEffect(() => {
-    fetch(`${API_URL}/api/artworks`).then(res => res.json()).then((data: Artwork[]) => {
+    fetch(`${API_URL}/artworks`).then(res => res.json()).then((data: Artwork[]) => {
       const artworksWithFullUrl = data.map(art => ({ ...art, fileUrl: `${API_URL}${art.imageUrl}` }));
       setHistory([[...artworksWithFullUrl]]);
       setHistoryIndex(0);
     }).catch(console.error);
 
-    fetch(`${API_URL}/api/scenarios`).then(res => res.json()).then((data: Scenario[]) => {
+    fetch(`${API_URL}/scenarios`).then(res => res.json()).then((data: Scenario[]) => {
         const scenariosWithUrls = data.map(sc => ({ ...sc, fileUrl: `${API_URL}${sc.imageUrl}` }));
         setCustomScenarios(scenariosWithUrls);
         if (scenariosWithUrls.length > 0) {
@@ -129,7 +129,7 @@ const HomePage: React.FC = () => {
     formData.append('mat', JSON.stringify(initialMatState));
 
     try {
-      const response = await fetch(`${API_URL}/api/artworks`, { method: 'POST', body: formData });
+      const response = await fetch(`${API_URL}/artworks`, { method: 'POST', body: formData });
       if (!response.ok) throw new Error('No se pudo crear la obra de arte');
       const newArtwork: Artwork = await response.json();
       setArtworksWithHistory(prev => [...prev, { ...newArtwork, fileUrl: `${API_URL}${newArtwork.imageUrl}` }]);
@@ -145,7 +145,7 @@ const HomePage: React.FC = () => {
         formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
     });
     try {
-        await fetch(`${API_URL}/api/artworks/${_id}`, { method: 'PUT', body: formData });
+        await fetch(`${API_URL}/artworks/${_id}`, { method: 'PUT', body: formData });
     } catch (error) { console.error('Falló la actualización de la obra de arte:', error); }
   }, 1000);
 
@@ -167,7 +167,7 @@ const HomePage: React.FC = () => {
     e.stopPropagation();
     if (!window.confirm('¿Estás seguro?')) return;
     try {
-      await fetch(`${API_URL}/api/artworks/${id}`, { method: 'DELETE' });
+      await fetch(`${API_URL}/artworks/${id}`, { method: 'DELETE' });
       setArtworksWithHistory(prev => prev.filter(art => art._id !== id));
       setStagedArtworkIds(prev => { const newSet = new Set(prev); newSet.delete(id); return newSet; });
     } catch (error) { console.error('No se pudo eliminar la obra de arte:', error); }
@@ -177,7 +177,7 @@ const HomePage: React.FC = () => {
       const formData = new FormData();
       formData.append('scenarioImage', file);
       try {
-          const response = await fetch(`${API_URL}/api/scenarios`, { method: 'POST', body: formData });
+          const response = await fetch(`${API_URL}/scenarios`, { method: 'POST', body: formData });
           if (!response.ok) throw new Error('No se pudo cargar el escenario');
           const newScenario: Scenario = await response.json();
           const newScenarioWithUrl = { ...newScenario, fileUrl: `${API_URL}${newScenario.imageUrl}` };
@@ -190,7 +190,7 @@ const HomePage: React.FC = () => {
       e.stopPropagation();
       if (!window.confirm('¿Eliminar este escenario personalizado?')) return;
       try {
-          await fetch(`${API_URL}/api/scenarios/${id}`, { method: 'DELETE' });
+          await fetch(`${API_URL}/scenarios/${id}`, { method: 'DELETE' });
           setCustomScenarios(prev => prev.filter(sc => sc._id !== id));
           if (activeScenarioUrl.includes(id) && customScenarios.length > 1) {
             setActiveScenarioUrl(customScenarios.find(sc => sc._id !== id)!.fileUrl!);

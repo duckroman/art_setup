@@ -35,7 +35,7 @@ const corsOptions: cors.CorsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+app.use('/api/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // DB Connection
 const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/artsetup';
