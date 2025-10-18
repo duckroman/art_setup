@@ -6,7 +6,7 @@ import FileUploader from '../components/FileUploader';
 import ArtworkForm from '../components/ArtworkForm';
 import type { ArtworkMetadata } from '../components/ArtworkForm';
 
-const API_URL = 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // --- TYPE DEFINITIONS ---
 interface FrameState { show: boolean; width: number; height: number; color: string; }

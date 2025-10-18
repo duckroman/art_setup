@@ -13,7 +13,27 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+// Middleware
+const allowedOrigins = [
+    'https://artsetup.jrc-projects.cloud',
+    'http://localhost:5173',
+    'http://localhost:5174'
+];
+
+const corsOptions: cors.CorsOptions = {
+    origin: (origin, callback) => {
+        if (origin && allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else if (!origin) {
+            // Allow requests with no origin (like mobile apps or curl requests)
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
