@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import Scenario from '../models/Scenario';
-import fs from 'fs';
-import path from 'path';
+
 
 export const getScenarios = async (req: Request, res: Response) => {
   try {
@@ -20,7 +19,7 @@ export const createScenario = async (req: Request, res: Response) => {
 
         const scenario = new Scenario({
             name: req.file.originalname, // Use original file name as default
-            imageUrl: `/uploads/${req.file.filename}`,
+            imageDataUrl: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
         });
 
         const newScenario = await scenario.save();
@@ -35,11 +34,7 @@ export const deleteScenario = async (req: Request, res: Response) => {
     const deletedScenario = await Scenario.findByIdAndDelete(req.params.id);
     if (!deletedScenario) return res.status(404).json({ message: 'Scenario not found' });
 
-    // Delete the image file from storage
-    const imagePath = path.join(__dirname, '../../public', deletedScenario.imageUrl);
-    if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-    }
+
 
     res.json({ message: 'Scenario deleted' });
   } catch (error: any) {

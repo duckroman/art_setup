@@ -38,7 +38,7 @@ interface Artwork {
 interface Scenario {
     _id: string;
     name: string;
-    imageUrl: string;
+    imageDataUrl: string;
 
 }
 
@@ -102,10 +102,9 @@ const HomePage: React.FC = () => {
     }).catch(console.error);
 
     fetch(`${API_URL}/scenarios`).then(res => res.json()).then((data: Scenario[]) => {
-        const scenariosWithUrls = data.map(sc => ({ ...sc, fileUrl: `${API_URL}${sc.imageUrl}` }));
-        setCustomScenarios(scenariosWithUrls);
-        if (scenariosWithUrls.length > 0) {
-            setActiveScenarioUrl(scenariosWithUrls[0].fileUrl!);
+        setCustomScenarios(data);
+        if (data.length > 0) {
+            setActiveScenarioUrl(data[0].imageDataUrl!);
         }
     }).catch(console.error);
   }, []);
@@ -179,9 +178,8 @@ const HomePage: React.FC = () => {
           const response = await fetch(`${API_URL}/scenarios`, { method: 'POST', body: formData });
           if (!response.ok) throw new Error('No se pudo cargar el escenario');
           const newScenario: Scenario = await response.json();
-          const newScenarioWithUrl = { ...newScenario, fileUrl: `${API_URL}${newScenario.imageUrl}` };
-          setCustomScenarios(prev => [...prev, newScenarioWithUrl]);
-          setActiveScenarioUrl(newScenarioWithUrl.fileUrl!);
+          setCustomScenarios(prev => [...prev, newScenario]);
+          setActiveScenarioUrl(newScenario.imageDataUrl!);
       } catch (error) { console.error(error); }
   };
 
@@ -192,7 +190,7 @@ const HomePage: React.FC = () => {
           await fetch(`${API_URL}/scenarios/${id}`, { method: 'DELETE' });
           setCustomScenarios(prev => prev.filter(sc => sc._id !== id));
           if (activeScenarioUrl.includes(id) && customScenarios.length > 1) {
-            setActiveScenarioUrl(customScenarios.find(sc => sc._id !== id)!.fileUrl!);
+            setActiveScenarioUrl(customScenarios.find(sc => sc._id !== id)!.imageDataUrl!);
           } else if (customScenarios.length <= 1) {
             setActiveScenarioUrl('');
           }
@@ -266,7 +264,7 @@ const HomePage: React.FC = () => {
                     <div className="grid grid-cols-3 gap-2 mt-2">
                         {customScenarios.map(sc => (
                             <div key={sc._id} className="relative group">
-                                <img src={sc.fileUrl || sc.imageUrl} alt={sc.name} onClick={() => setActiveScenarioUrl(sc.fileUrl || sc.imageUrl)} className={`h-16 w-full object-cover rounded cursor-pointer border-2 ${activeScenarioUrl === (sc.fileUrl || sc.imageUrl) ? 'border-blue-500' : 'border-transparent'}`} crossOrigin="anonymous" />
+                                <img src={sc.imageDataUrl} alt={sc.name} onClick={() => setActiveScenarioUrl(sc.imageDataUrl)} className={`h-16 w-full object-cover rounded cursor-pointer border-2 ${activeScenarioUrl === sc.imageDataUrl ? 'border-blue-500' : 'border-transparent'}`} crossOrigin="anonymous" />
                                 <button onClick={(e) => handleScenarioDelete(sc._id, e)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10">X</button>
                             </div>
                         ))}
