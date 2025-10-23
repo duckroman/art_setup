@@ -1,13 +1,8 @@
 import multer from 'multer';
 import path from 'path';
 
-// Set up storage engine
-const storage = multer.diskStorage({
-  destination: './public/uploads/',
-  filename: function(req, file, cb){
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-  }
-});
+// Set up storage engine to use memory
+const storage = multer.memoryStorage();
 
 // Check File Type
 function checkFileType(file: Express.Multer.File, cb: multer.FileFilterCallback){

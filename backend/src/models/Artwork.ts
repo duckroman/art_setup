@@ -30,7 +30,7 @@ interface IArtwork extends Document {
   title: string;
   artist: string;
   year: number;
-  imageUrl: string;
+  imageDataUrl: string;
   metadata: {
       width: string;
       height: string;
@@ -71,7 +71,7 @@ const artworkSchema = new Schema<IArtwork>(
     title: { type: String, required: true },
     artist: { type: String, required: true },
     year: { type: Number, required: true },
-    imageUrl: { type: String, required: true },
+    imageDataUrl: { type: String, required: true },
     metadata: {
         width: { type: String, required: true },
         height: { type: String, required: true },

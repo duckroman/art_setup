@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import Artwork from '../models/Artwork';
-import fs from 'fs';
-import path from 'path';
+
 
 export const getArtworks = async (req: Request, res: Response) => {
   try {
@@ -32,7 +31,7 @@ export const createArtwork = async (req: Request, res: Response) => {
             title,
             artist,
             year,
-            imageUrl: `/uploads/${req.file.filename}`,
+            imageDataUrl: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
             metadata: JSON.parse(metadata),
             transform: JSON.parse(transform),
             frame: JSON.parse(frame),
@@ -54,17 +53,9 @@ export const updateArtwork = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Artwork not found' });
         }
 
-        // If a new file is uploaded, delete the old one
-        if (req.file) {
-            const oldImagePath = path.join(__dirname, '../../public', existingArtwork.imageUrl);
-            if (fs.existsSync(oldImagePath)) {
-                fs.unlinkSync(oldImagePath);
-            }
-        }
-
         const updatedData = { ...req.body };
         if(req.file) {
-            updatedData.imageUrl = `/uploads/${req.file.filename}`;
+            updatedData.imageDataUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
         }
         
         // Parse stringified JSON fields from form-data
@@ -85,11 +76,7 @@ export const deleteArtwork = async (req: Request, res: Response) => {
     const deletedArtwork = await Artwork.findByIdAndDelete(req.params.id);
     if (!deletedArtwork) return res.status(404).json({ message: 'Artwork not found' });
 
-    // Delete the image file from storage
-    const imagePath = path.join(__dirname, '../../public', deletedArtwork.imageUrl);
-    if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
-    }
+
 
     res.json({ message: 'Artwork deleted' });
   } catch (error: any) {

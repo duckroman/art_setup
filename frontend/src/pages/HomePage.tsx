@@ -28,8 +28,8 @@ interface Artwork {
   title: string;
   artist: string;
   year: string;
-  imageUrl: string;
-  fileUrl?: string; 
+  imageDataUrl: string;
+
   metadata: { width: string, height: string };
   transform: TransformState;
   frame: FrameState;
@@ -39,7 +39,7 @@ interface Scenario {
     _id: string;
     name: string;
     imageUrl: string;
-    fileUrl?: string;
+
 }
 
 // --- INITIAL STATES ---
@@ -97,8 +97,7 @@ const HomePage: React.FC = () => {
   // --- DATA FETCHING ---
   useEffect(() => {
     fetch(`${API_URL}/artworks`).then(res => res.json()).then((data: Artwork[]) => {
-      const artworksWithFullUrl = data.map(art => ({ ...art, fileUrl: `${API_URL}${art.imageUrl}` }));
-      setHistory([[...artworksWithFullUrl]]);
+      setHistory([[...data]]);
       setHistoryIndex(0);
     }).catch(console.error);
 
@@ -132,14 +131,14 @@ const HomePage: React.FC = () => {
       const response = await fetch(`${API_URL}/artworks`, { method: 'POST', body: formData });
       if (!response.ok) throw new Error('No se pudo crear la obra de arte');
       const newArtwork: Artwork = await response.json();
-      setArtworksWithHistory(prev => [...prev, { ...newArtwork, fileUrl: `${API_URL}${newArtwork.imageUrl}` }]);
+      setArtworksWithHistory(prev => [...prev, newArtwork]);
       setIsFormVisible(false);
       setPendingFile(null);
     } catch (error) { console.error(error); }
   };
 
   const debouncedUpdateArtwork = useDebouncedCallback(async (artworkToUpdate: Artwork) => {
-    const { _id, fileUrl, ...artworkData } = artworkToUpdate;
+    const { _id, ...artworkData } = artworkToUpdate;
     const formData = new FormData();
     Object.entries(artworkData).forEach(([key, value]) => {
         formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
@@ -243,7 +242,7 @@ const HomePage: React.FC = () => {
           {artworks.map(art => (
             <div key={art._id} className={`relative border rounded-lg p-2 shadow-lg bg-white transition-all cursor-pointer ${stagedArtworkIds.has(art._id) ? 'shadow-blue-500/50 shadow-xl' : ''}`} onClick={() => handleStagingToggle(art._id)}>
               <div className="relative group">
-                <img src={art.fileUrl} alt={art.title} className="w-full h-40 object-contain rounded-md mb-2 bg-gray-200" crossOrigin="anonymous" />
+                <img src={art.imageDataUrl} alt={art.title} className="w-full h-40 object-contain rounded-md mb-2 bg-gray-200" crossOrigin="anonymous" />
                 <button onClick={(e) => handleArtworkDelete(art._id, e)} className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity z-10">X</button>
               </div>
               <div className="text-xs"><h2 className="font-semibold truncate">{art.title}</h2><p className="truncate">{art.artist}, {art.year}</p></div>
@@ -306,7 +305,7 @@ const HomePage: React.FC = () => {
           const perspectiveStyle = { transform: `perspective(${art.transform.perspective}px) rotateX(${art.transform.rotateX}deg) rotateY(${art.transform.rotateY}deg) rotate(${art.transform.rotation}deg) scale(${art.transform.scale})` };
           const frameStyle = art.frame.show ? { backgroundColor: art.frame.color, padding: `${art.frame.height}px ${art.frame.width}px` } : {};
           const matStyle = art.mat.show ? { background: '#f1f1f1', padding: `${art.mat.height}px ${art.mat.width}px` } : {};
-          return <Rnd key={art._id} size={{ width: art.transform.width, height: art.transform.height }} position={{ x: art.transform.x, y: art.transform.y }} onDragStart={() => setSelectedEditorArtworkId(art._id)} onDragStop={(_e: any, d: any) => updateArtworkState(art._id, { transform: { x: d.x, y: d.y } })} enableResizing={false} bounds="parent" className={`z-10 ${isSelected ? 'z-20' : ''}`} onClick={(e: any) => { e.stopPropagation(); setSelectedEditorArtworkId(art._id); }}><div style={perspectiveStyle} className={`w-full h-full ${isSelected ? 'outline outline-4 outline-blue-500' : ''}`}><div style={frameStyle} className="w-full h-full shadow-lg"><div style={matStyle} className="w-full h-full shadow-inner"><img src={art.fileUrl} alt={art.title} className="w-full h-full object-contain pointer-events-none" crossOrigin="anonymous" /></div></div></div></Rnd>;
+          return <Rnd key={art._id} size={{ width: art.transform.width, height: art.transform.height }} position={{ x: art.transform.x, y: art.transform.y }} onDragStart={() => setSelectedEditorArtworkId(art._id)} onDragStop={(_e: any, d: any) => updateArtworkState(art._id, { transform: { x: d.x, y: d.y } })} enableResizing={false} bounds="parent" className={`z-10 ${isSelected ? 'z-20' : ''}`} onClick={(e: any) => { e.stopPropagation(); setSelectedEditorArtworkId(art._id); }}><div style={perspectiveStyle} className={`w-full h-full ${isSelected ? 'outline outline-4 outline-blue-500' : ''}`}><div style={frameStyle} className="w-full h-full shadow-lg"><div style={matStyle} className="w-full h-full shadow-inner"><img src={art.imageDataUrl} alt={art.title} className="w-full h-full object-contain pointer-events-none" crossOrigin="anonymous" /></div></div></div></Rnd>;
         })}
       </div>
     </div>
