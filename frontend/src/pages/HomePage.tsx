@@ -22,6 +22,8 @@ interface TransformState {
   y: number;
   width: number;
   height: number;
+  originalWidth?: number;
+  originalHeight?: number;
 }
 interface Artwork {
   _id: string;
@@ -86,6 +88,9 @@ const HomePage: React.FC = () => {
   
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  const stagedArtworks = useMemo(() => artworks.filter(art => stagedArtworkIds.has(art._id)), [artworks, stagedArtworkIds]);
+  const selectedEditorArtwork = useMemo(() => artworks.find(art => art._id === selectedEditorArtworkId), [artworks, selectedEditorArtworkId]);
+
   const setArtworksWithHistory = (newArtworks: Artwork[] | ((prev: Artwork[]) => Artwork[])) => {
     const newArtworksState = typeof newArtworks === 'function' ? newArtworks(artworks) : newArtworks;
     const newHistory = history.slice(0, historyIndex + 1);
@@ -109,9 +114,6 @@ const HomePage: React.FC = () => {
     }).catch(console.error);
   }, []);
 
-  const stagedArtworks = useMemo(() => artworks.filter(art => stagedArtworkIds.has(art._id)), [artworks, stagedArtworkIds]);
-  const selectedEditorArtwork = useMemo(() => artworks.find(art => art._id === selectedEditorArtworkId), [artworks, selectedEditorArtworkId]);
-
   // --- API HANDLERS ---
   const handleArtworkSubmit = async (metadata: ArtworkMetadata) => {
     if (!pendingFile) return;
@@ -122,7 +124,14 @@ const HomePage: React.FC = () => {
     formData.append('artist', metadata.artist);
     formData.append('year', metadata.year);
     formData.append('metadata', JSON.stringify({ width: metadata.width, height: metadata.height }));
-    formData.append('transform', JSON.stringify({ ...initialTransform, x: 50, y: 50, ...dimensions }));
+    formData.append('transform', JSON.stringify({ 
+      ...initialTransform, 
+      x: 50, 
+      y: 50, 
+      ...dimensions,
+      originalWidth: dimensions.width,
+      originalHeight: dimensions.height,
+    }));
     formData.append('frame', JSON.stringify(initialFrameState));
     formData.append('mat', JSON.stringify(initialMatState));
 
@@ -138,10 +147,19 @@ const HomePage: React.FC = () => {
 
   const debouncedUpdateArtwork = useDebouncedCallback(async (artworkToUpdate: Artwork) => {
     const { _id, ...artworkData } = artworkToUpdate;
+    
+    // Do not send originalWidth or originalHeight to the backend
+    const dataForBackend = JSON.parse(JSON.stringify(artworkData));
+    if (dataForBackend.transform) {
+        delete dataForBackend.transform.originalWidth;
+        delete dataForBackend.transform.originalHeight;
+    }
+
     const formData = new FormData();
-    Object.entries(artworkData).forEach(([key, value]) => {
+    Object.entries(dataForBackend).forEach(([key, value]) => {
         formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
     });
+
     try {
         await fetch(`${API_URL}/artworks/${_id}`, { method: 'PUT', body: formData });
     } catch (error) { console.error('Falló la actualización de la obra de arte:', error); }
@@ -197,8 +215,6 @@ const HomePage: React.FC = () => {
       } catch (error) { console.error('No se pudo eliminar el escenario:', error); }
   }
 
-  
-
   // --- HISTORY HANDLERS ---
   const handleUndo = () => {
       if (historyIndex > 0) setHistoryIndex(prev => prev - 1);
@@ -252,9 +268,9 @@ const HomePage: React.FC = () => {
   );
 
   const renderEditor = () => (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-800 text-white">
-        <div className={`bg-gray-900 shadow-lg transition-all duration-300 ${isSidebarCollapsed ? 'w-0 p-0' : 'w-full md:w-1/3 md:max-w-sm p-4'}`}>
-            <div className={`${isSidebarCollapsed ? 'hidden' : 'block'} h-full flex flex-col`}>
+    <div className="flex flex-col md:flex-row h-screen bg-gray-800 text-white overflow-hidden">
+        <div className={`bg-gray-900 shadow-lg transition-all duration-300 ${isSidebarCollapsed ? 'w-0 p-0' : 'w-full h-1/2 md:h-full md:w-1/3 md:max-w-sm p-4'}`}>
+            <div className={`${isSidebarCollapsed ? 'hidden' : 'block'} h-full flex flex-col overflow-x-hidden`}>
                 <button onClick={() => setViewMode('gallery')} className="mb-4 w-full bg-gray-700 text-white py-2 px-4 rounded hover:bg-gray-600 flex-shrink-0">← Volver a la Galería</button>
                 <div className={selectedEditorArtwork ? 'h-1/2 overflow-y-auto -mr-4 pr-4' : 'mb-6 flex-shrink-0'}>
                     <h3 className="text-lg font-semibold mb-2">Escenario</h3>
@@ -286,7 +302,60 @@ const HomePage: React.FC = () => {
                             <button onClick={handleDiscard} className="text-sm bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded">Eliminar</button>
                         </div>
                     </div>
-                    <div className="mb-4 p-2 rounded bg-gray-800"><h4 className="font-semibold mb-2 text-sm">Perspectiva y Rotación 3D</h4>{Object.keys(initialTransform).map(key => { const k = key as keyof typeof initialTransform; const labels: Record<keyof typeof initialTransform, string> = { perspective: 'Perspectiva', rotateX: 'Rotar X', rotateY: 'Rotar Y', rotation: 'Rotación', scale: 'Escala' }; return <div key={k}><label className="text-xs flex justify-between"><span>{labels[k]}</span><span>{selectedEditorArtwork.transform[k]}</span></label><input type="range" min={k === 'scale' ? 0.1 : -180} max={k === 'scale' ? 3 : 180} step={k === 'scale' ? 0.05 : 1} value={selectedEditorArtwork.transform[k]} onChange={e => updateArtworkState(selectedEditorArtwork._id, { transform: { [k]: Number(e.target.value) } })} className="w-full" /></div>; })}</div>
+                    <div className="mb-4 p-2 rounded bg-gray-800">
+                        <h4 className="font-semibold mb-2 text-sm">Perspectiva y Rotación 3D</h4>
+                        
+                        <div>
+                            <label className="text-xs flex justify-between"><span>Perspectiva</span><span>{selectedEditorArtwork.transform.perspective}</span></label>
+                            <input type="range" min={500} max={2000} step={50} value={selectedEditorArtwork.transform.perspective} onChange={e => updateArtworkState(selectedEditorArtwork._id, { transform: { perspective: Number(e.target.value) } })} className="w-full" />
+                        </div>
+
+                        <div>
+                            <label className="text-xs flex justify-between"><span>Rotar X</span><span>{selectedEditorArtwork.transform.rotateX}</span></label>
+                            <input type="range" min={-180} max={180} step={1} value={selectedEditorArtwork.transform.rotateX} onChange={e => updateArtworkState(selectedEditorArtwork._id, { transform: { rotateX: Number(e.target.value) } })} className="w-full" />
+                        </div>
+
+                        <div>
+                            <label className="text-xs flex justify-between"><span>Rotar Y</span><span>{selectedEditorArtwork.transform.rotateY}</span></label>
+                            <input type="range" min={-180} max={180} step={1} value={selectedEditorArtwork.transform.rotateY} onChange={e => updateArtworkState(selectedEditorArtwork._id, { transform: { rotateY: Number(e.target.value) } })} className="w-full" />
+                        </div>
+
+                        <div>
+                            <label className="text-xs flex justify-between"><span>Rotación</span><span>{selectedEditorArtwork.transform.rotation}</span></label>
+                            <input type="range" min={-180} max={180} step={1} value={selectedEditorArtwork.transform.rotation} onChange={e => updateArtworkState(selectedEditorArtwork._id, { transform: { rotation: Number(e.target.value) } })} className="w-full" />
+                        </div>
+
+                        <div>
+                            <label className="text-xs flex justify-between"><span>Escala</span><span>{selectedEditorArtwork.transform.scale}</span></label>
+                            <input 
+                                type="range" 
+                                min={0.1} 
+                                max={3} 
+                                step={0.05} 
+                                value={selectedEditorArtwork.transform.scale} 
+                                onChange={e => {
+                                    const newScale = Number(e.target.value);
+                                    const { transform } = selectedEditorArtwork;
+                                    const originalWidth = transform.originalWidth || transform.width;
+                                    const originalHeight = transform.originalHeight || transform.height;
+
+                                    const updates: Partial<TransformState> = {
+                                        scale: newScale,
+                                        width: originalWidth * newScale,
+                                        height: originalHeight * newScale,
+                                    };
+
+                                    if (!transform.originalWidth) {
+                                        updates.originalWidth = originalWidth;
+                                        updates.originalHeight = originalHeight;
+                                    }
+
+                                    updateArtworkState(selectedEditorArtwork._id, { transform: updates });
+                                }} 
+                                className="w-full" 
+                            />
+                        </div>
+                    </div>
                     <div className="mb-4 p-2 rounded bg-gray-800"><h4 className="font-semibold mb-2 text-sm">Marco</h4><label className="flex items-center text-xs"><input type="checkbox" checked={selectedEditorArtwork.frame.show} onChange={e => updateArtworkState(selectedEditorArtwork._id, { frame: { show: e.target.checked } })} className="mr-2"/>Mostrar Marco</label>{selectedEditorArtwork.frame.show && <div className="mt-2 space-y-2"><input type="color" value={selectedEditorArtwork.frame.color} onChange={e => updateArtworkState(selectedEditorArtwork._id, { frame: { color: e.target.value } })} className="w-full h-8 p-0 border-none"/><div><label className="text-xs">Ancho: {selectedEditorArtwork.frame.width}px</label><input type="range" min="0" max="100" value={selectedEditorArtwork.frame.width} onChange={e => updateArtworkState(selectedEditorArtwork._id, { frame: { width: Number(e.target.value) } })} className="w-full"/></div><div><label className="text-xs">Alto: {selectedEditorArtwork.frame.height}px</label><input type="range" min="0" max="100" value={selectedEditorArtwork.frame.height} onChange={e => updateArtworkState(selectedEditorArtwork._id, { frame: { height: Number(e.target.value) } })} className="w-full"/></div></div>}</div>
                     <div className="p-2 rounded bg-gray-800"><h4 className="font-semibold mb-2 text-sm">Marialuisa</h4><label className="flex items-center text-xs"><input type="checkbox" checked={selectedEditorArtwork.mat.show} onChange={e => updateArtworkState(selectedEditorArtwork._id, { mat: { show: e.target.checked } })} className="mr-2"/>Mostrar Marialuisa</label>{selectedEditorArtwork.mat.show && <div className="mt-2 space-y-2"><div><label className="text-xs">Ancho: {selectedEditorArtwork.mat.width}px</label><input type="range" min="0" max="150" value={selectedEditorArtwork.mat.width} onChange={e => updateArtworkState(selectedEditorArtwork._id, { mat: { width: Number(e.target.value) } })} className="w-full"/></div><div><label className="text-xs">Alto: {selectedEditorArtwork.mat.height}px</label><input type="range" min="0" max="150" value={selectedEditorArtwork.mat.height} onChange={e => updateArtworkState(selectedEditorArtwork._id, { mat: { height: Number(e.target.value) } })} className="w-full"/></div></div>}</div>
                 </div>
@@ -294,16 +363,57 @@ const HomePage: React.FC = () => {
                 </div>
             </div>
         </div>
-      <div ref={canvasRef} id="canvas-container" className="flex-grow relative h-1/2 md:h-full" style={{ backgroundImage: `url(${activeScenarioUrl})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} onClick={() => setSelectedEditorArtworkId(null)}>
+      <div ref={canvasRef} id="canvas-container" className="flex-grow relative md:h-full" style={{ backgroundImage: `url(${activeScenarioUrl})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }} onClick={() => setSelectedEditorArtworkId(null)}>
         <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="absolute top-2 left-2 z-30 bg-gray-800 bg-opacity-50 p-2 rounded-full text-white hover:bg-opacity-75">
             {isSidebarCollapsed ? '>' : '<'}
         </button>
         {stagedArtworks.map(art => {
           const isSelected = art._id === selectedEditorArtworkId;
-          const perspectiveStyle = { transform: `perspective(${art.transform.perspective}px) rotateX(${art.transform.rotateX}deg) rotateY(${art.transform.rotateY}deg) rotate(${art.transform.rotation}deg) scale(${art.transform.scale})` };
+          const { width, height, rotation, rotateX, rotateY, x, y, perspective = 1000 } = art.transform;
+
+          // --- Styles ---
+          const perspectiveStyle = {
+            transform: `perspective(${perspective}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotate(${rotation}deg)`,
+            width: '100%',
+            height: '100%',
+          };
+
+          const contentWrapperStyle = {
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+          };
+
           const frameStyle = art.frame.show ? { backgroundColor: art.frame.color, padding: `${art.frame.height}px ${art.frame.width}px` } : {};
           const matStyle = art.mat.show ? { background: '#f1f1f1', padding: `${art.mat.height}px ${art.mat.width}px` } : {};
-          return <Rnd key={art._id} size={{ width: art.transform.width, height: art.transform.height }} position={{ x: art.transform.x, y: art.transform.y }} onDragStart={() => setSelectedEditorArtworkId(art._id)} onDragStop={(_e: any, d: any) => updateArtworkState(art._id, { transform: { x: d.x, y: d.y } })} enableResizing={false} bounds="parent" className={`z-10 ${isSelected ? 'z-20' : ''}`} onClick={(e: any) => { e.stopPropagation(); setSelectedEditorArtworkId(art._id); }}><div style={perspectiveStyle} className={`w-full h-full ${isSelected ? 'outline outline-4 outline-blue-500' : ''}`}><div style={frameStyle} className="w-full h-full shadow-lg"><div style={matStyle} className="w-full h-full shadow-inner"><img src={art.imageDataUrl} alt={art.title} className="w-full h-full object-contain pointer-events-none" crossOrigin="anonymous" /></div></div></div></Rnd>;
+
+          return (
+            <Rnd
+              key={art._id}
+              size={{ width: width, height: height }}
+              position={{ x: x, y: y }}
+              onDragStart={() => setSelectedEditorArtworkId(art._id)}
+              onDragStop={(_e: any, d: any) => {
+                updateArtworkState(art._id, { transform: { x: d.x, y: d.y } });
+              }}
+              enableResizing={false}
+              bounds="parent"
+              className={`z-10 ${isSelected ? 'z-20' : ''}`}
+              onClick={(e: any) => { e.stopPropagation(); setSelectedEditorArtworkId(art._id); }}
+            >
+              <div style={contentWrapperStyle}>
+                <div style={perspectiveStyle} className={`${isSelected ? 'outline outline-4 outline-blue-500' : ''}`}>
+                  <div style={frameStyle} className="w-full h-full shadow-lg">
+                    <div style={matStyle} className="w-full h-full shadow-inner">
+                      <img src={art.imageDataUrl} alt={art.title} className="w-full h-full object-contain pointer-events-none" crossOrigin="anonymous" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Rnd>
+          );
         })}
       </div>
     </div>
